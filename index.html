@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsideOut Chatbot</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Fredoka+One:wght@400&family=Comic+Neue:wght@300;400;700&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Comic Neue', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            background-attachment: fixed;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 25px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Auth Styles */
+        .auth-container {
+            padding: 40px;
+            text-align: center;
+            background: linear-gradient(45deg, #bd4f96, #5447ce);
+            color: white;
+        }
+
+        .auth-form {
+            max-width: 400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 30px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+        }
+
+        .auth-form h2 {
+            font-family: 'Fredoka One', cursive;
+            margin-bottom: 20px;
+            font-size: 2em;
+        }
+
+        .auth-form input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 15px;
+            font-size: 16px;
+            font-family: 'Comic Neue', cursive;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        .auth-form button {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: none;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #ff6b6b, #bd52ee);
+            color: white;
+            font-family: 'Comic Neue', cursive;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .auth-form button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.2);
+        }
+
+        .auth-toggle {
+            margin-top: 15px;
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .auth-toggle a {
+            color: white;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        /* Main App Styles */
+        .main-app {
+            display: none;
+        }
+
+        .header {
+            background: linear-gradient(45deg, #bd4f96, #5447ce);
+            padding: 25px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-left h1 {
+            font-family: 'Fredoka One', cursive;
+            font-size: 2.5em;
+            color: white;
+            text-shadow: 3px 3px 0px rgba(0, 0, 0, 0.2);
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 300;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .user-info {
+            color: white;
+            font-weight: 700;
+        }
+
+        .header-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .header-btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            font-family: 'Comic Neue', cursive;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .header-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .logout-btn {
+            background: rgba(255, 107, 107, 0.3) !important;
+        }
+
+        .content-area {
+            display: flex;
+            height: 500px;
+        }
+
+        .chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .mood-section {
+            width: 300px;
+            background: linear-gradient(to bottom, #f8f9ff, #e8f0ff);
+            border-left: 2px solid #e0e0e0;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .mood-section.hidden {
+            display: none;
+        }
+
+        .mood-section h3 {
+            color: #5447ce;
+            margin-bottom: 15px;
+            font-family: 'Fredoka One', cursive;
+        }
+
+        .mood-chart {
+            background: white;
+            border-radius: 15px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .emotion-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 8px 0;
+        }
+
+        .emotion-name {
+            font-weight: 600;
+            text-transform: capitalize;
+        }
+
+        .emotion-count {
+            background: #5447ce;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 0.8em;
+        }
+
+        .mood-history {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .day-mood {
+            background: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin: 5px 0;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .day-mood .date {
+            font-weight: 700;
+            color: #5447ce;
+            font-size: 0.9em;
+        }
+
+        .day-mood .dominant {
+            color: #666;
+            font-size: 0.8em;
+            text-transform: capitalize;
+        }
+
+        #chat {
+            height: 400px;
+            overflow-y: auto;
+            padding: 20px;
+            background: linear-gradient(to bottom, #f8f9ff, #e8f0ff);
+            position: relative;
+        }
+
+        .message {
+            margin: 15px 0;
+            animation: slideIn 0.3s ease-out;
+            max-width: 85%;
+        }
+
+        .user {
+            text-align: right;
+            margin-left: auto;
+        }
+
+        .user .bubble {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border-radius: 20px 20px 5px 20px;
+            padding: 15px 20px;
+            display: inline-block;
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+            font-weight: 400;
+            position: relative;
+        }
+
+        .bot {
+            text-align: left;
+        }
+
+        .bot .bubble {
+            background: linear-gradient(135deg, #564ecd, #ea15ee);
+            color: white;
+            border-radius: 20px 20px 20px 5px;
+            padding: 15px 20px;
+            display: inline-block;
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+            font-weight: 400;
+            position: relative;
+            white-space: pre-line;
+            line-height: 1.6;
+        }
+
+        .emotion-badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            display: inline-block;
+            backdrop-filter: blur(10px);
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        #message {
+            flex: 1;
+            padding: 15px 20px;
+            border: 3px solid #e0e0e0;
+            border-radius: 25px;
+            font-family: 'Comic Neue', cursive;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+            background: #f8f9ff;
+        }
+
+        #message:focus {
+            border-color: #4ecdc4;
+            transform: scale(1.02);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.2);
+        }
+
+        .send-button {
+            background: linear-gradient(135deg, #ff6b6b, #bd52ee);
+            color: white;
+            border: none;
+            padding: 15px 25px;
+            border-radius: 25px;
+            font-family: 'Comic Neue', cursive;
+            font-weight: 700;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(255, 107, 107, 0.3);
+        }
+
+        .send-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 8px 25px rgba(255, 107, 107, 0.4);
+        }
+
+        .typing-indicator {
+            display: none;
+            padding: 10px 20px;
+            color: #666;
+            font-style: italic;
+        }
+
+        .error-message {
+            color: #ff6b6b;
+            text-align: center;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        .success-message {
+            color: #4ecdc4;
+            text-align: center;
+            margin: 10px 0;
+            font-weight: 600;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom scrollbar */
+        #chat::-webkit-scrollbar, .mood-section::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        #chat::-webkit-scrollbar-track, .mood-section::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        #chat::-webkit-scrollbar-thumb, .mood-section::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #4ecdc4, #44a08d);
+            border-radius: 10px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .content-area {
+                flex-direction: column;
+                height: auto;
+            }
+            
+            .mood-section {
+                width: 100%;
+                height: 200px;
+            }
+            
+            .header {
+                flex-direction: column;
+                text-align: center;
+                gap: 15px;
+            }
+            
+            .header-right {
+                justify-content: center;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Authentication Container -->
+    <div id="authContainer" class="container">
+        <div class="auth-container">
+            <h1 style="font-family: 'Fredoka One', cursive; font-size: 3em; margin-bottom: 20px;">InsideOut Chatbot 💬</h1>
+            
+            <!-- Login Form -->
+            <div id="loginForm" class="auth-form">
+                <h2>Welcome Back!</h2>
+                <input type="text" id="loginUsername" placeholder="Username" required>
+                <button onclick="login()">Login 🚀</button>
+                <div class="auth-toggle">
+                    Don't have an account? <a onclick="showRegister()">Sign up here</a>
+                </div>
+                <div id="loginError" class="error-message"></div>
+            </div>
+            
+            <!-- Register Form -->
+            <div id="registerForm" class="auth-form" style="display: none;">
+                <h2>Join InsideOut!</h2>
+                <input type="text" id="registerUsername" placeholder="Username" required>
+                <input type="email" id="registerEmail" placeholder="Email" required>
+                <button onclick="register()">Sign Up 🌟</button>
+                <div class="auth-toggle">
+                    Already have an account? <a onclick="showLogin()">Login here</a>
+                </div>
+                <div id="registerError" class="error-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main App Container -->
+    <div id="mainApp" class="container main-app">
+        <div class="header">
+            <div class="header-left">
+                <h1>InsideOut Chatbot 💬</h1>
+                <div class="subtitle">Your friendly emotional support companion</div>
+            </div>
+            <div class="header-right">
+                <div class="user-info">
+                    Welcome, <span id="usernameDisplay"></span>!
+                </div>
+                <div class="header-buttons">
+                    <button class="header-btn" onclick="toggleMoodTracker()">📊 Mood Tracker</button>
+                    <button class="header-btn" onclick="clearHistory()">🗑️ Clear History</button>
+                    <button class="header-btn logout-btn" onclick="logout()">🚪 Logout</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="content-area">
+            <div class="chat-section">
+                <div id="chat"></div>
+                <div class="typing-indicator" id="typing">Bot is typing...</div>
+                
+                <div class="input-container">
+                    <input id="message" placeholder="Type your message here... 😊" autocomplete="off">
+                    <button class="send-button" type="button" id="sendBtn">Send 🚀</button>
+                </div>
+            </div>
+            
+            <div id="moodSection" class="mood-section hidden">
+                <h3>📊 Today's Mood</h3>
+                <div id="todayMood" class="mood-chart">
+                    <div style="text-align: center; color: #666;">Loading...</div>
+                </div>
+                
+                <h3>📈 Mood History</h3>
+                <div id="moodHistory" class="mood-history">
+                    <div style="text-align: center; color: #666;">Loading...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = "http://127.0.0.1:8000";
+        let authToken = null;
+        let currentUser = null;
+
+        // -------------------------
+        // 🔐 Authentication Functions
+        // -------------------------
+        function showLogin() {
+            document.getElementById('loginForm').style.display = 'block';
+            document.getElementById('registerForm').style.display = 'none';
+            clearErrorMessages();
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').style.display = 'none';
+            document.getElementById('registerForm').style.display = 'block';
+            clearErrorMessages();
+        }
+
+        function clearErrorMessages() {
+            document.getElementById('loginError').textContent = '';
+            document.getElementById('registerError').textContent = '';
+        }
+
+        async function login() {
+            const username = document.getElementById('loginUsername').value.trim();
+            
+            if (!username) {
+                document.getElementById('loginError').textContent = 'Please enter your username';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ username: username })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Login failed');
+                }
+
+                authToken = data.token;
+                currentUser = data.user;
+                
+                // Store in sessionStorage for persistence
+                sessionStorage.setItem('authToken', authToken);
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                showMainApp();
+                loadGreeting();
+                
+            } catch (error) {
+                document.getElementById('loginError').textContent = error.message;
+            }
+        }
+
+        async function register() {
+            const username = document.getElementById('registerUsername').value.trim();
+            const email = document.getElementById('registerEmail').value.trim();
+            
+            if (!username || !email) {
+                document.getElementById('registerError').textContent = 'Please fill in all fields';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/register`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        username: username,
+                        email: email 
+                    })
+                });
+
+                const data = await response.json();
+
+                if (!response.ok) {
+                    throw new Error(data.detail || 'Registration failed');
+                }
+
+                authToken = data.token;
+                currentUser = data.user;
+                
+                // Store in sessionStorage for persistence
+                sessionStorage.setItem('authToken', authToken);
+                sessionStorage.setItem('currentUser', JSON.stringify(currentUser));
+                
+                showMainApp();
+                loadGreeting();
+                
+            } catch (error) {
+                document.getElementById('registerError').textContent = error.message;
+            }
+        }
+
+        function logout() {
+            authToken = null;
+            currentUser = null;
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('currentUser');
+            
+            showAuthContainer();
+            document.getElementById('chat').innerHTML = '';
+            clearErrorMessages();
+        }
+
+        function showMainApp() {
+            document.getElementById('authContainer').style.display = 'none';
+            document.getElementById('mainApp').style.display = 'block';
+            document.getElementById('usernameDisplay').textContent = currentUser.username;
+            loadMoodTracker();
+        }
+
+        function showAuthContainer() {
+            document.getElementById('authContainer').style.display = 'block';
+            document.getElementById('mainApp').style.display = 'none';
+        }
+
+        // -------------------------
+        // 💬 Chat Functions
+        // -------------------------
+        function formatBotMessage(message) {
+            return message.replace(/\\n/g, '\n').trim();
+        }
+
+        function addMessage(sender, message, emotion = null) {
+            console.log('Adding message:', sender, message);
+            const chat = document.getElementById("chat");
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const bubble = document.createElement('div');
+            bubble.className = 'bubble';
+            
+            if (sender === 'bot' && emotion && emotion !== 'No Emotion') {
+                const emotionBadge = document.createElement('div');
+                emotionBadge.className = 'emotion-badge';
+                emotionBadge.textContent = emotion;
+                bubble.appendChild(emotionBadge);
+            }
+            
+            const messageText = document.createElement('div');
+            messageText.textContent = message;
+            bubble.appendChild(messageText);
+            
+            messageDiv.appendChild(bubble);
+            chat.appendChild(messageDiv);
+            
+            setTimeout(() => {
+                chat.scrollTop = chat.scrollHeight;
+            }, 100);
+        }
+
+        function showTypingIndicator() {
+            document.getElementById('typing').style.display = 'block';
+            const chat = document.getElementById("chat");
+            chat.scrollTop = chat.scrollHeight;
+        }
+
+        function hideTypingIndicator() {
+            document.getElementById('typing').style.display = 'none';
+        }
+
+        async function loadGreeting() {
+            console.log('Loading greeting...');
+            try {
+                const res = await fetch(`${API_URL}/start`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    mode: 'cors'
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
+                const data = await res.json();
+                const formattedMessage = formatBotMessage(data.reply);
+                addMessage('bot', formattedMessage);
+            } catch (error) {
+                console.error('Error loading greeting:', error);
+                addMessage('bot', `Hello ${currentUser.username}! 👋\nI'm here to help and support you! 🌟\nHow are you feeling today? 😊`);
+            }
+        }
+
+        async function sendMessage() {
+            const msgInput = document.getElementById("message");
+            const msg = msgInput.value.trim();
+            
+            if (!msg) return;
+            
+            addMessage('user', msg);
+            msgInput.value = "";
+            showTypingIndicator();
+
+            try {
+                const res = await fetch(`${API_URL}/chat`, {
+                    method: "POST",
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ message: msg })
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
+                const data = await res.json();
+                hideTypingIndicator();
+                
+                const formattedMessage = formatBotMessage(data.reply);
+                addMessage('bot', formattedMessage, data.emotion);
+                
+                // Refresh mood tracker if visible
+                if (!document.getElementById('moodSection').classList.contains('hidden')) {
+                    loadMoodTracker();
+                }
+                
+            } catch (error) {
+                console.error('Error in sendMessage:', error);
+                hideTypingIndicator();
+                addMessage('bot', `❌ Connection Error: ${error.message}`);
+            }
+        }
+
+        // -------------------------
+        // 🗑️ History Management
+        // -------------------------
+        async function clearHistory() {
+            if (!confirm('Are you sure you want to clear your chat history? This cannot be undone.')) {
+                return;
+            }
+
+            try {
+                const res = await fetch(`${API_URL}/clear-history`, {
+                    method: "DELETE",
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
+                // Clear the chat display
+                document.getElementById('chat').innerHTML = '';
+                
+                // Show success message
+                addMessage('bot', '✨ Your chat history has been cleared! How are you feeling today?');
+                
+                // Refresh mood tracker
+                loadMoodTracker();
+                
+            } catch (error) {
+                console.error('Error clearing history:', error);
+                addMessage('bot', `❌ Error clearing history: ${error.message}`);
+            }
+        }
+
+        // -------------------------
+        // 📊 Mood Tracker Functions
+        // -------------------------
+        function toggleMoodTracker() {
+            const moodSection = document.getElementById('moodSection');
+            moodSection.classList.toggle('hidden');
+            
+            if (!moodSection.classList.contains('hidden')) {
+                loadMoodTracker();
+            }
+        }
+
+        async function loadMoodTracker() {
+            try {
+                const res = await fetch(`${API_URL}/mood-tracker`, {
+                    headers: {
+                        "Authorization": `Bearer ${authToken}`
+                    }
+                });
+                
+                if (!res.ok) {
+                    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+                }
+                
+                const data = await res.json();
+                updateMoodDisplay(data);
+                
+            } catch (error) {
+                console.error('Error loading mood tracker:', error);
+                document.getElementById('todayMood').innerHTML = '<div style="text-align: center; color: #ff6b6b;">Error loading mood data</div>';
+            }
+        }
+
+        function updateMoodDisplay(moodData) {
+            // Update today's mood
+            const todayMood = document.getElementById('todayMood');
+            const today = moodData.today;
+            
+            if (today.total_messages === 0) {
+                todayMood.innerHTML = '<div style="text-align: center; color: #666;">No messages today yet</div>';
+            } else {
+                let emotionBars = '';
+                const emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust'];
+                
+                emotions.forEach(emotion => {
+                    const count = today.emotions[emotion] || 0;
+                    if (count > 0) {
+                        emotionBars += `
+                            <div class="emotion-bar">
+                                <span class="emotion-name">${getEmotionEmoji(emotion)} ${emotion}</span>
+                                <span class="emotion-count">${count}</span>
+                            </div>
+                        `;
+                    }
+                });
+                
+                if (emotionBars === '') {
+                    emotionBars = '<div style="text-align: center; color: #666;">Neutral day so far</div>';
+                }
+                
+                todayMood.innerHTML = `
+                    <div style="margin-bottom: 10px; font-weight: 700; color: #5447ce;">
+                        ${today.total_messages} messages today
+                    </div>
+                    ${emotionBars}
+                `;
+            }
+            
+            // Update mood history
+            const moodHistory = document.getElementById('moodHistory');
+            let historyHtml = '';
+            
+            moodData.mood_history.forEach(day => {
+                const dayDate = new Date(day.date).toLocaleDateString();
+                historyHtml += `
+                    <div class="day-mood">
+                        <div class="date">${dayDate}</div>
+                        <div class="dominant">
+                            ${getEmotionEmoji(day.dominant_emotion)} ${day.dominant_emotion}
+                            (${day.total_messages} messages)
+                        </div>
+                    </div>
+                `;
+            });
+            
+            if (historyHtml === '') {
+                historyHtml = '<div style="text-align: center; color: #666;">No mood history yet</div>';
+            }
+            
+            moodHistory.innerHTML = historyHtml;
+        }
+
+        function getEmotionEmoji(emotion) {
+            const emojiMap = {
+                'joy': '😊',
+                'sadness': '😢',
+                'anger': '😠',
+                'fear': '😰',
+                'disgust': '🤢',
+                'neutral': '😐'
+            };
+            return emojiMap[emotion] || '😐';
+        }
+
+        // -------------------------
+        // 🚀 Initialization
+        // -------------------------
+        function checkAuthState() {
+            const storedToken = sessionStorage.getItem('authToken');
+            const storedUser = sessionStorage.getItem('currentUser');
+            
+            if (storedToken && storedUser) {
+                authToken = storedToken;
+                currentUser = JSON.parse(storedUser);
+                showMainApp();
+                loadGreeting();
+            } else {
+                showAuthContainer();
+            }
+        }
+
+        // Event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Page loaded, checking auth state');
+            checkAuthState();
+            
+            // Send button click
+            document.getElementById('sendBtn').addEventListener('click', function(e) {
+                e.preventDefault();
+                sendMessage();
+            });
+            
+            // Enter key press for chat
+            document.getElementById('message').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    sendMessage();
+                }
+            });
+            
+            // Enter key press for login
+            document.getElementById('loginUsername').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    login();
+                }
+            });
+            
+            // Enter key press for register
+            document.getElementById('registerEmail').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    register();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
