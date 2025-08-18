@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InsideOut API Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .endpoint {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+            background-color: #fafafa;
+        }
+        .endpoint h3 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .method {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            font-weight: bold;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .get { background-color: #61affe; color: white; }
+        .post { background-color: #49cc90; color: white; }
+        .delete { background-color: #f93e3e; color: white; }
+        
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .form-group {
+            margin: 10px 0;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧠 InsideOut Chatbot API Test</h1>
+        <p>Test your FastAPI endpoints locally. Make sure your server is running on <code>http://localhost:8000</code></p>
+        
+        <div id="auth-status" style="padding: 10px; margin: 10px 0; border-radius: 5px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;">
+            🔒 <strong>Not Authenticated</strong> - Login to test protected endpoints
+            <button onclick="logout()" style="float: right; background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Logout</button>
+        </div>
+        
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> Health Check</h3>
+            <p>Check if the API is running and healthy</p>
+            <button onclick="testHealth()">Test Health</button>
+            <div id="health-response" class="response"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> Root Endpoint</h3>
+            <p>Get the main API information</p>
+            <button onclick="testRoot()">Test Root</button>
+            <div id="root-response" class="response"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> User Registration</h3>
+            <p>Register a new user</p>
+            <div class="form-group">
+                <label for="reg-username">Username:</label>
+                <input type="text" id="reg-username" value="testuser">
+            </div>
+            <div class="form-group">
+                <label for="reg-email">Email:</label>
+                <input type="email" id="reg-email" value="test@example.com">
+            </div>
+            <button onclick="testRegister()">Register User</button>
+            <div id="register-response" class="response"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> User Login</h3>
+            <p>Login with existing user</p>
+            <div class="form-group">
+                <label for="login-username">Username:</label>
+                <input type="text" id="login-username" value="testuser">
+            </div>
+            <button onclick="testLogin()">Login</button>
+            <div id="login-response" class="response"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> Start Conversation</h3>
+            <p>Start a new conversation (requires authentication)</p>
+            <button onclick="testStartConversation()">Start Conversation</button>
+            <div id="start-conversation-response" class="response"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> Chat</h3>
+            <p>Send a message to the chatbot (requires authentication)</p>
+            <div class="form-group">
+                <label for="chat-message">Message:</label>
+                <textarea id="chat-message" rows="3">Hello, I'm feeling a bit sad today.</textarea>
+            </div>
+            <button onclick="testChat()">Send Message</button>
+            <div id="chat-response" class="response"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method get">GET</span> Mood Tracker</h3>
+            <p>Get mood tracking data (requires authentication)</p>
+            <button onclick="testMoodTracker()">Get Mood Data</button>
+            <div id="mood-response" class="response"></div>
+        </div>
+
+        <div class="endpoint">
+            <h3><span class="method post">POST</span> Mood Entry</h3>
+            <p>Add a mood entry (requires authentication)</p>
+            <div class="form-group">
+                <label for="mood-emotion">Emotion:</label>
+                <select id="mood-emotion">
+                    <option value="happy">Happy</option>
+                    <option value="sad">Sad</option>
+                    <option value="angry">Angry</option>
+                    <option value="anxious">Anxious</option>
+                    <option value="excited">Excited</option>
+                    <option value="calm">Calm</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="mood-message">Message:</label>
+                <textarea id="mood-message" rows="2">Feeling great today!</textarea>
+            </div>
+            <button onclick="testMoodEntry()">Add Mood Entry</button>
+            <div id="mood-entry-response" class="response"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let authToken = '';
+
+        function updateAuthStatus() {
+            const authStatus = document.getElementById('auth-status');
+            if (authToken) {
+                authStatus.style.backgroundColor = '#d4edda';
+                authStatus.style.borderColor = '#c3e6cb';
+                authStatus.style.color = '#155724';
+                authStatus.innerHTML = '✅ <strong>Authenticated</strong> - You can now test protected endpoints';
+            } else {
+                authStatus.style.backgroundColor = '#f8d7da';
+                authStatus.style.borderColor = '#f5c6cb';
+                authStatus.style.color = '#721c24';
+                authStatus.innerHTML = '🔒 <strong>Not Authenticated</strong> - Login to test protected endpoints';
+            }
+        }
+
+        function showResponse(elementId, data, isError = false) {
+            const element = document.getElementById(elementId);
+            element.textContent = JSON.stringify(data, null, 2);
+            element.className = `response ${isError ? 'error' : 'success'}`;
+        }
+
+        function showError(elementId, error) {
+            showResponse(elementId, { error: error.message || error }, true);
+        }
+
+        async function makeRequest(url, options = {}) {
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                const data = await response.json();
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${data.detail || data.message || 'Unknown error'}`);
+                }
+                
+                return data;
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function testHealth() {
+            try {
+                const data = await makeRequest(`${API_BASE}/health`);
+                showResponse('health-response', data);
+            } catch (error) {
+                showError('health-response', error);
+            }
+        }
+
+        async function testRoot() {
+            try {
+                const data = await makeRequest(`${API_BASE}/`);
+                showResponse('root-response', data);
+            } catch (error) {
+                showError('root-response', error);
+            }
+        }
+
+        async function testRegister() {
+            try {
+                const username = document.getElementById('reg-username').value;
+                const email = document.getElementById('reg-email').value;
+                
+                const data = await makeRequest(`${API_BASE}/register`, {
+                    method: 'POST',
+                    body: JSON.stringify({ username, email })
+                });
+                
+                showResponse('register-response', data);
+            } catch (error) {
+                showError('register-response', error);
+            }
+        }
+
+        async function testLogin() {
+            try {
+                const username = document.getElementById('login-username').value;
+                
+                const data = await makeRequest(`${API_BASE}/login`, {
+                    method: 'POST',
+                    body: JSON.stringify({ username })
+                });
+                
+                if (data.token) {
+                    authToken = data.token;
+                    updateAuthStatus();
+                    showResponse('login-response', { ...data, note: 'Token saved for subsequent requests' });
+                } else {
+                    showResponse('login-response', data);
+                }
+            } catch (error) {
+                showError('login-response', error);
+            }
+        }
+
+        async function testStartConversation() {
+            try {
+                if (!authToken) {
+                    showError('start-conversation-response', 'Please login first to get an auth token');
+                    return;
+                }
+                
+                const data = await makeRequest(`${API_BASE}/start`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                showResponse('start-conversation-response', data);
+            } catch (error) {
+                showError('start-conversation-response', error);
+            }
+        }
+
+        async function testChat() {
+            try {
+                if (!authToken) {
+                    showError('chat-response', 'Please login first to get an auth token');
+                    return;
+                }
+                
+                const message = document.getElementById('chat-message').value;
+                
+                console.log('Sending chat request:', { message });
+                
+                const data = await makeRequest(`${API_BASE}/chat`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ message })
+                });
+                
+                showResponse('chat-response', data);
+            } catch (error) {
+                console.error('Chat error:', error);
+                showError('chat-response', error);
+            }
+        }
+
+        async function testMoodTracker() {
+            try {
+                if (!authToken) {
+                    showError('mood-response', 'Please login first to get an auth token');
+                    return;
+                }
+                
+                const data = await makeRequest(`${API_BASE}/mood-tracker`, {
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    }
+                });
+                
+                showResponse('mood-response', data);
+            } catch (error) {
+                showError('mood-response', error);
+            }
+        }
+
+        async function testMoodEntry() {
+            try {
+                if (!authToken) {
+                    showError('mood-entry-response', 'Please login first to get an auth token');
+                    return;
+                }
+                
+                const emotion = document.getElementById('mood-emotion').value;
+                const message = document.getElementById('mood-message').value;
+                
+                const data = await makeRequest(`${API_BASE}/mood-entry`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${authToken}`
+                    },
+                    body: JSON.stringify({ emotion, message })
+                });
+                
+                showResponse('mood-entry-response', data);
+            } catch (error) {
+                showError('mood-entry-response', error);
+            }
+        }
+
+        // Auto-test health on page load
+        window.onload = function() {
+            testHealth();
+            updateAuthStatus();
+        };
+
+        function logout() {
+            authToken = '';
+            updateAuthStatus();
+            alert('Logged out successfully!');
+        }
+    </script>
+</body>
+</html> 
