@@ -1,0 +1,25 @@
+# Core FastAPI dependencies
+fastapi>=0.100.0
+uvicorn[standard]>=0.20.0
+pydantic>=2.0.0
+
+# AI and Language Model dependencies
+langchain-core>=0.1.0
+langchain-cohere>=0.4.0
+cohere>=4.0.0
+
+# Database dependencies
+supabase>=2.0.0
+postgrest>=0.13.0
+
+# Security and authentication
+python-jose[cryptography]>=3.3.0
+PyJWT>=2.8.0
+python-multipart>=0.0.6
+
+# HTTP and networking
+httpx>=0.24.0
+requests>=2.28.0
+
+# Environment and configuration
+python-dotenv>=1.0.0
