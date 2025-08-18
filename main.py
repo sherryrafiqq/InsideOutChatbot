@@ -48,14 +48,15 @@ load_dotenv()
 # 🔧 Configuration
 # -------------------------
 
-# Environment Variables with secure defaults for PythonAnywhere
-COHERE_API_KEY = os.getenv("COHERE_API_KEY", "VS5BhKslAOlQJ4ZSHwGwm87l4wum9dOi2NIQZg02")
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://qvqbhoptpecvflidiqik.supabase.co/")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InF2cWJob3B0cGVjdmZsaWRpcWlrIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NDU5NTgxNSwiZXhwIjoyMDcwMTcxODE1fQ.PagGgXS09wDLDB6VeCn6E2z6LKyuIYK0bqC6Nx_P_2E")
-JWT_SECRET = os.getenv("JWT_SECRET", "your-super-secret-jwt-key-change-me-in-production")
+# Environment Variables - No hardcoded defaults for security
+COHERE_API_KEY = os.getenv("COHERE_API_KEY")
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+JWT_SECRET = os.getenv("JWT_SECRET")
 
-# PythonAnywhere specific configurations
+# Platform specific configurations
 IS_PYTHONANYWHERE = os.getenv("PYTHONANYWHERE_SITE", "").startswith("www.pythonanywhere.com")
+IS_RENDER = os.getenv("RENDER", "False").lower() == "true"
 DEBUG_MODE = os.getenv("DEBUG", "False").lower() == "true"
 
 # Set Cohere API key in environment
@@ -87,8 +88,8 @@ allowed_origins = [
     "https://your-flutter-app-domain.com",  # Replace with your actual domain
 ]
 
-# For local development, allow all origins
-if not IS_PYTHONANYWHERE:
+# For local development and Render, allow all origins
+if not IS_PYTHONANYWHERE or IS_RENDER:
     allowed_origins = ["*"]
 
 if DEBUG_MODE:
@@ -504,7 +505,7 @@ async def root():
             "status": "healthy",
             "ai_available": AI_AVAILABLE,
             "database_connected": supabase is not None,
-            "environment": "production" if IS_PYTHONANYWHERE else "development"
+            "environment": "production" if (IS_PYTHONANYWHERE or IS_RENDER) else "development"
         }
     )
 
@@ -516,7 +517,7 @@ async def health_check():
         "database_connected": supabase is not None,
         "ai_available": AI_AVAILABLE,
         "timestamp": datetime.utcnow().isoformat(),
-        "environment": "production" if IS_PYTHONANYWHERE else "development"
+        "environment": "production" if (IS_PYTHONANYWHERE or IS_RENDER) else "development"
     }
     
     # Test database connection
