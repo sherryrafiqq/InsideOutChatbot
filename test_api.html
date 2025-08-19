@@ -3,402 +3,588 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InsideOut API Test</title>
+    <title>InsideOut API Tester</title>
     <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
-            background-color: #f5f5f5;
-        }
-        .container {
             background: white;
+            border-radius: 15px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        .api-section {
+            margin-bottom: 40px;
+            border: 1px solid #e1e5e9;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .section-header {
+            background: #f8f9fa;
             padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-bottom: 1px solid #e1e5e9;
+            font-weight: bold;
+            font-size: 1.2em;
+            color: #495057;
+        }
+
+        .section-content {
+            padding: 20px;
+        }
+
+        .form-group {
             margin-bottom: 20px;
         }
-        .endpoint {
-            border: 1px solid #ddd;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 5px;
-            background-color: #fafafa;
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #495057;
         }
-        .endpoint h3 {
-            margin: 0 0 10px 0;
-            color: #333;
+
+        input, textarea, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e1e5e9;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
         }
-        .method {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 3px;
-            font-weight: bold;
-            font-size: 12px;
-            margin-right: 10px;
+
+        input:focus, textarea:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
         }
-        .get { background-color: #61affe; color: white; }
-        .post { background-color: #49cc90; color: white; }
-        .delete { background-color: #f93e3e; color: white; }
-        
+
         button {
-            background-color: #007bff;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             color: white;
             border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
+            padding: 12px 24px;
+            border-radius: 8px;
             cursor: pointer;
-            margin: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            transition: transform 0.2s;
         }
+
         button:hover {
-            background-color: #0056b3;
+            transform: translateY(-2px);
         }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
         .response {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            padding: 10px;
-            border-radius: 4px;
-            margin-top: 10px;
-            white-space: pre-wrap;
-            font-family: monospace;
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
             font-size: 12px;
+            white-space: pre-wrap;
             max-height: 300px;
             overflow-y: auto;
         }
-        .error {
-            background-color: #f8d7da;
-            border-color: #f5c6cb;
-            color: #721c24;
-        }
-        .success {
-            background-color: #d4edda;
-            border-color: #c3e6cb;
+
+        .response.success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
             color: #155724;
         }
-        input, textarea {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            box-sizing: border-box;
+
+        .response.error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
         }
-        .form-group {
-            margin: 10px 0;
+
+        .response.info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
         }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+
+        .token-display {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            word-break: break-all;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+
+        .status-connected {
+            background: #28a745;
+        }
+
+        .status-disconnected {
+            background: #dc3545;
+        }
+
+        .chat-messages {
+            max-height: 300px;
+            overflow-y: auto;
+            border: 1px solid #e1e5e9;
+            border-radius: 8px;
+            padding: 15px;
+            background: #f8f9fa;
+        }
+
+        .message {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-radius: 8px;
+        }
+
+        .message.user {
+            background: #e3f2fd;
+            margin-left: 20%;
+        }
+
+        .message.bot {
+            background: #f3e5f5;
+            margin-right: 20%;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>🧠 InsideOut Chatbot API Test</h1>
-        <p>Test your FastAPI endpoints locally. Make sure your server is running on <code>http://localhost:8000</code></p>
-        
-        <div id="auth-status" style="padding: 10px; margin: 10px 0; border-radius: 5px; background-color: #f8d7da; border: 1px solid #f5c6cb; color: #721c24;">
-            🔒 <strong>Not Authenticated</strong> - Login to test protected endpoints
-            <button onclick="logout()" style="float: right; background-color: #dc3545; color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer;">Logout</button>
-        </div>
-        
-        <div class="endpoint">
-            <h3><span class="method get">GET</span> Health Check</h3>
-            <p>Check if the API is running and healthy</p>
-            <button onclick="testHealth()">Test Health</button>
-            <div id="health-response" class="response"></div>
+        <div class="header">
+            <h1>🤖 InsideOut API Tester</h1>
+            <p>Test your empathetic AI chatbot API endpoints</p>
         </div>
 
-        <div class="endpoint">
-            <h3><span class="method get">GET</span> Root Endpoint</h3>
-            <p>Get the main API information</p>
-            <button onclick="testRoot()">Test Root</button>
-            <div id="root-response" class="response"></div>
-        </div>
-
-        <div class="endpoint">
-            <h3><span class="method post">POST</span> User Registration</h3>
-            <p>Register a new user</p>
-            <div class="form-group">
-                <label for="reg-username">Username:</label>
-                <input type="text" id="reg-username" value="testuser">
+        <div class="content">
+            <!-- API Status -->
+            <div class="api-section">
+                <div class="section-header">
+                    <span class="status-indicator" id="statusIndicator"></span>
+                    API Status
+                </div>
+                <div class="section-content">
+                    <button onclick="checkStatus()">Check API Status</button>
+                    <div id="statusResponse" class="response info" style="display: none;"></div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="reg-email">Email:</label>
-                <input type="email" id="reg-email" value="test@example.com">
-            </div>
-            <button onclick="testRegister()">Register User</button>
-            <div id="register-response" class="response"></div>
-        </div>
 
-        <div class="endpoint">
-            <h3><span class="method post">POST</span> User Login</h3>
-            <p>Login with existing user</p>
-            <div class="form-group">
-                <label for="login-username">Username:</label>
-                <input type="text" id="login-username" value="testuser">
-            </div>
-            <button onclick="testLogin()">Login</button>
-            <div id="login-response" class="response"></div>
-        </div>
+            <!-- Authentication -->
+            <div class="api-section">
+                <div class="section-header">🔐 Authentication</div>
+                <div class="section-content">
+                    <div class="grid">
+                        <div>
+                            <h3>Register User</h3>
+                            <div class="form-group">
+                                <label>Username:</label>
+                                <input type="text" id="regUsername" placeholder="Enter username">
+                            </div>
+                            <div class="form-group">
+                                <label>Email:</label>
+                                <input type="email" id="regEmail" placeholder="Enter email">
+                            </div>
+                            <button onclick="registerUser()">Register</button>
+                            <div id="registerResponse" class="response" style="display: none;"></div>
+                        </div>
 
-        <div class="endpoint">
-            <h3><span class="method get">GET</span> Start Conversation</h3>
-            <p>Start a new conversation (requires authentication)</p>
-            <button onclick="testStartConversation()">Start Conversation</button>
-            <div id="start-conversation-response" class="response"></div>
-        </div>
+                        <div>
+                            <h3>Login User</h3>
+                            <div class="form-group">
+                                <label>Username:</label>
+                                <input type="text" id="loginUsername" placeholder="Enter username">
+                            </div>
+                            <button onclick="loginUser()">Login</button>
+                            <div id="loginResponse" class="response" style="display: none;"></div>
+                        </div>
+                    </div>
 
-        <div class="endpoint">
-            <h3><span class="method post">POST</span> Chat</h3>
-            <p>Send a message to the chatbot (requires authentication)</p>
-            <div class="form-group">
-                <label for="chat-message">Message:</label>
-                <textarea id="chat-message" rows="3">Hello, I'm feeling a bit sad today.</textarea>
+                    <div id="tokenDisplay" class="token-display" style="display: none;">
+                        <strong>JWT Token:</strong> <span id="jwtToken"></span>
+                    </div>
+                </div>
             </div>
-            <button onclick="testChat()">Send Message</button>
-            <div id="chat-response" class="response"></div>
-        </div>
 
-        <div class="endpoint">
-            <h3><span class="method get">GET</span> Mood Tracker</h3>
-            <p>Get mood tracking data (requires authentication)</p>
-            <button onclick="testMoodTracker()">Get Mood Data</button>
-            <div id="mood-response" class="response"></div>
-        </div>
+            <!-- Chat -->
+            <div class="api-section">
+                <div class="section-header">💬 Chat</div>
+                <div class="section-content">
+                    <div class="form-group">
+                        <label>Message:</label>
+                        <textarea id="chatMessage" rows="3" placeholder="Type your message here..."></textarea>
+                    </div>
+                    <button onclick="sendChat()" id="chatButton" disabled>Send Message</button>
+                    
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="message bot">
+                            <strong>Bot:</strong> Hi! I'm here to listen and support you. How are you feeling today?
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="endpoint">
-            <h3><span class="method post">POST</span> Mood Entry</h3>
-            <p>Add a mood entry (requires authentication)</p>
-            <div class="form-group">
-                <label for="mood-emotion">Emotion:</label>
-                <select id="mood-emotion">
-                    <option value="happy">Happy</option>
-                    <option value="sad">Sad</option>
-                    <option value="angry">Angry</option>
-                    <option value="anxious">Anxious</option>
-                    <option value="excited">Excited</option>
-                    <option value="calm">Calm</option>
-                </select>
+            <!-- Mood Tracking -->
+            <div class="api-section">
+                <div class="section-header">📊 Mood Tracking</div>
+                <div class="section-content">
+                    <div class="grid">
+                        <div>
+                            <h3>Get Mood History</h3>
+                            <div class="form-group">
+                                <label>Days:</label>
+                                <select id="moodDays">
+                                    <option value="7">7 days</option>
+                                    <option value="14">14 days</option>
+                                    <option value="30">30 days</option>
+                                </select>
+                            </div>
+                            <button onclick="getMoodHistory()">Get Mood History</button>
+                            <div id="moodResponse" class="response" style="display: none;"></div>
+                        </div>
+
+                        <div>
+                            <h3>Add Mood Entry</h3>
+                            <div class="form-group">
+                                <label>Emotion:</label>
+                                <select id="moodEmotion">
+                                    <option value="joy">Joy</option>
+                                    <option value="sadness">Sadness</option>
+                                    <option value="anger">Anger</option>
+                                    <option value="fear">Fear</option>
+                                    <option value="disgust">Disgust</option>
+                                    <option value="neutral">Neutral</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>Character Name:</label>
+                                <input type="text" id="characterName" placeholder="Enter character name">
+                            </div>
+                            <div class="form-group">
+                                <label>LED Color:</label>
+                                <input type="color" id="ledColor" value="#ff0000">
+                            </div>
+                            <div class="form-group">
+                                <label>Sound File:</label>
+                                <input type="text" id="soundFile" placeholder="Enter sound file name">
+                            </div>
+                            <button onclick="addMoodEntry()">Add Mood Entry</button>
+                            <div id="moodEntryResponse" class="response" style="display: none;"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="form-group">
-                <label for="mood-message">Message:</label>
-                <textarea id="mood-message" rows="2">Feeling great today!</textarea>
+
+            <!-- Profile -->
+            <div class="api-section">
+                <div class="section-header">👤 Profile</div>
+                <div class="section-content">
+                    <button onclick="getProfile()">Get Profile</button>
+                    <div id="profileResponse" class="response" style="display: none;"></div>
+                </div>
             </div>
-            <button onclick="testMoodEntry()">Add Mood Entry</button>
-            <div id="mood-entry-response" class="response"></div>
         </div>
     </div>
 
     <script>
-        const API_BASE = 'http://localhost:8000';
-        let authToken = '';
+        const API_BASE = 'https://web-production-29fb.up.railway.app';
+        let currentToken = null;
 
-        function updateAuthStatus() {
-            const authStatus = document.getElementById('auth-status');
-            if (authToken) {
-                authStatus.style.backgroundColor = '#d4edda';
-                authStatus.style.borderColor = '#c3e6cb';
-                authStatus.style.color = '#155724';
-                authStatus.innerHTML = '✅ <strong>Authenticated</strong> - You can now test protected endpoints';
-            } else {
-                authStatus.style.backgroundColor = '#f8d7da';
-                authStatus.style.borderColor = '#f5c6cb';
-                authStatus.style.color = '#721c24';
-                authStatus.innerHTML = '🔒 <strong>Not Authenticated</strong> - Login to test protected endpoints';
-            }
-        }
-
-        function showResponse(elementId, data, isError = false) {
+        // Utility functions
+        function showResponse(elementId, data, isSuccess = true) {
             const element = document.getElementById(elementId);
-            element.textContent = JSON.stringify(data, null, 2);
-            element.className = `response ${isError ? 'error' : 'success'}`;
+            element.style.display = 'block';
+            element.className = `response ${isSuccess ? 'success' : 'error'}`;
+            element.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
         }
 
-        function showError(elementId, error) {
-            showResponse(elementId, { error: error.message || error }, true);
+        function hideResponse(elementId) {
+            document.getElementById(elementId).style.display = 'none';
         }
 
-        async function makeRequest(url, options = {}) {
+        function updateStatusIndicator(connected) {
+            const indicator = document.getElementById('statusIndicator');
+            indicator.className = `status-indicator ${connected ? 'status-connected' : 'status-disconnected'}`;
+        }
+
+        // API Status
+        async function checkStatus() {
             try {
-                const response = await fetch(url, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        ...options.headers
-                    },
-                    ...options
-                });
-                
+                const response = await fetch(`${API_BASE}/`);
                 const data = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(`HTTP ${response.status}: ${data.detail || data.message || 'Unknown error'}`);
-                }
-                
-                return data;
+                showResponse('statusResponse', data, data.success);
+                updateStatusIndicator(data.success);
             } catch (error) {
-                throw error;
+                showResponse('statusResponse', `Error: ${error.message}`, false);
+                updateStatusIndicator(false);
             }
         }
 
-        async function testHealth() {
-            try {
-                const data = await makeRequest(`${API_BASE}/health`);
-                showResponse('health-response', data);
-            } catch (error) {
-                showError('health-response', error);
-            }
-        }
+        // Register User
+        async function registerUser() {
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
 
-        async function testRoot() {
-            try {
-                const data = await makeRequest(`${API_BASE}/`);
-                showResponse('root-response', data);
-            } catch (error) {
-                showError('root-response', error);
+            if (!username || !email) {
+                showResponse('registerResponse', 'Please fill in all fields', false);
+                return;
             }
-        }
 
-        async function testRegister() {
             try {
-                const username = document.getElementById('reg-username').value;
-                const email = document.getElementById('reg-email').value;
-                
-                const data = await makeRequest(`${API_BASE}/register`, {
+                const response = await fetch(`${API_BASE}/register`, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ username, email })
                 });
+
+                const data = await response.json();
+                showResponse('registerResponse', data, data.success);
                 
-                showResponse('register-response', data);
+                if (data.success) {
+                    document.getElementById('loginUsername').value = username;
+                }
             } catch (error) {
-                showError('register-response', error);
+                showResponse('registerResponse', `Error: ${error.message}`, false);
             }
         }
 
-        async function testLogin() {
+        // Login User
+        async function loginUser() {
+            const username = document.getElementById('loginUsername').value;
+
+            if (!username) {
+                showResponse('loginResponse', 'Please enter a username', false);
+                return;
+            }
+
             try {
-                const username = document.getElementById('login-username').value;
-                
-                const data = await makeRequest(`${API_BASE}/login`, {
+                const response = await fetch(`${API_BASE}/login`, {
                     method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
                     body: JSON.stringify({ username })
                 });
+
+                const data = await response.json();
+                showResponse('loginResponse', data, data.success);
                 
-                if (data.token) {
-                    authToken = data.token;
-                    updateAuthStatus();
-                    showResponse('login-response', { ...data, note: 'Token saved for subsequent requests' });
-                } else {
-                    showResponse('login-response', data);
+                if (data.success && data.token) {
+                    currentToken = data.token;
+                    document.getElementById('jwtToken').textContent = data.token;
+                    document.getElementById('tokenDisplay').style.display = 'block';
+                    document.getElementById('chatButton').disabled = false;
                 }
             } catch (error) {
-                showError('login-response', error);
+                showResponse('loginResponse', `Error: ${error.message}`, false);
             }
         }
 
-        async function testStartConversation() {
-            try {
-                if (!authToken) {
-                    showError('start-conversation-response', 'Please login first to get an auth token');
-                    return;
-                }
-                
-                const data = await makeRequest(`${API_BASE}/start`, {
-                    method: 'GET',
-                    headers: {
-                        'Authorization': `Bearer ${authToken}`
-                    }
-                });
-                
-                showResponse('start-conversation-response', data);
-            } catch (error) {
-                showError('start-conversation-response', error);
-            }
-        }
+        // Send Chat Message
+        async function sendChat() {
+            const message = document.getElementById('chatMessage').value;
 
-        async function testChat() {
+            if (!message) {
+                alert('Please enter a message');
+                return;
+            }
+
+            if (!currentToken) {
+                alert('Please login first');
+                return;
+            }
+
+            // Add user message to chat
+            addChatMessage('user', message);
+
             try {
-                if (!authToken) {
-                    showError('chat-response', 'Please login first to get an auth token');
-                    return;
-                }
-                
-                const message = document.getElementById('chat-message').value;
-                
-                console.log('Sending chat request:', { message });
-                
-                const data = await makeRequest(`${API_BASE}/chat`, {
+                const response = await fetch(`${API_BASE}/chat`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${authToken}`,
-                        'Content-Type': 'application/json'
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
                     },
                     body: JSON.stringify({ message })
                 });
+
+                const data = await response.json();
                 
-                showResponse('chat-response', data);
+                if (data.success) {
+                    addChatMessage('bot', data.data.reply, data.data.emotion);
+                } else {
+                    addChatMessage('bot', `Error: ${data.error}`, 'error');
+                }
             } catch (error) {
-                console.error('Chat error:', error);
-                showError('chat-response', error);
+                addChatMessage('bot', `Error: ${error.message}`, 'error');
             }
+
+            document.getElementById('chatMessage').value = '';
         }
 
-        async function testMoodTracker() {
+        function addChatMessage(sender, message, emotion = '') {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const emotionText = emotion ? ` (${emotion})` : '';
+            messageDiv.innerHTML = `<strong>${sender === 'user' ? 'You' : 'Bot'}:</strong>${emotionText} ${message}`;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Get Mood History
+        async function getMoodHistory() {
+            if (!currentToken) {
+                showResponse('moodResponse', 'Please login first', false);
+                return;
+            }
+
+            const days = document.getElementById('moodDays').value;
+
             try {
-                if (!authToken) {
-                    showError('mood-response', 'Please login first to get an auth token');
-                    return;
-                }
-                
-                const data = await makeRequest(`${API_BASE}/mood-tracker`, {
+                const response = await fetch(`${API_BASE}/mood-tracker?days=${days}`, {
                     headers: {
-                        'Authorization': `Bearer ${authToken}`
+                        'Authorization': `Bearer ${currentToken}`
                     }
                 });
-                
-                showResponse('mood-response', data);
+
+                const data = await response.json();
+                showResponse('moodResponse', data, data.success);
             } catch (error) {
-                showError('mood-response', error);
+                showResponse('moodResponse', `Error: ${error.message}`, false);
             }
         }
 
-        async function testMoodEntry() {
+        // Add Mood Entry
+        async function addMoodEntry() {
+            if (!currentToken) {
+                showResponse('moodEntryResponse', 'Please login first', false);
+                return;
+            }
+
+            const emotion = document.getElementById('moodEmotion').value;
+            const characterName = document.getElementById('characterName').value;
+            const ledColor = document.getElementById('ledColor').value;
+            const soundFile = document.getElementById('soundFile').value;
+
+            if (!characterName || !soundFile) {
+                showResponse('moodEntryResponse', 'Please fill in all fields', false);
+                return;
+            }
+
             try {
-                if (!authToken) {
-                    showError('mood-entry-response', 'Please login first to get an auth token');
-                    return;
-                }
-                
-                const emotion = document.getElementById('mood-emotion').value;
-                const message = document.getElementById('mood-message').value;
-                
-                const data = await makeRequest(`${API_BASE}/mood-entry`, {
+                const response = await fetch(`${API_BASE}/mood-entry`, {
                     method: 'POST',
                     headers: {
-                        'Authorization': `Bearer ${authToken}`
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${currentToken}`
                     },
-                    body: JSON.stringify({ emotion, message })
+                    body: JSON.stringify({
+                        emotion,
+                        character_name: characterName,
+                        led_color: ledColor,
+                        sound_file: soundFile
+                    })
                 });
-                
-                showResponse('mood-entry-response', data);
+
+                const data = await response.json();
+                showResponse('moodEntryResponse', data, data.success);
             } catch (error) {
-                showError('mood-entry-response', error);
+                showResponse('moodEntryResponse', `Error: ${error.message}`, false);
             }
         }
 
-        // Auto-test health on page load
-        window.onload = function() {
-            testHealth();
-            updateAuthStatus();
-        };
+        // Get Profile
+        async function getProfile() {
+            if (!currentToken) {
+                showResponse('profileResponse', 'Please login first', false);
+                return;
+            }
 
-        function logout() {
-            authToken = '';
-            updateAuthStatus();
-            alert('Logged out successfully!');
+            try {
+                const response = await fetch(`${API_BASE}/profile`, {
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`
+                    }
+                });
+
+                const data = await response.json();
+                showResponse('profileResponse', data, data.success);
+            } catch (error) {
+                showResponse('profileResponse', `Error: ${error.message}`, false);
+            }
         }
+
+        // Enter key for chat
+        document.getElementById('chatMessage').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChat();
+            }
+        });
+
+        // Auto-check status on load
+        window.addEventListener('load', checkStatus);
     </script>
 </body>
+</html> 
 </html> 
