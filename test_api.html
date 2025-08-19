@@ -299,34 +299,7 @@
                             <div id="moodResponse" class="response" style="display: none;"></div>
                         </div>
 
-                        <div>
-                            <h3>Add Mood Entry</h3>
-                            <div class="form-group">
-                                <label>Emotion:</label>
-                                <select id="moodEmotion">
-                                    <option value="joy">Joy</option>
-                                    <option value="sadness">Sadness</option>
-                                    <option value="anger">Anger</option>
-                                    <option value="fear">Fear</option>
-                                    <option value="disgust">Disgust</option>
-                                    <option value="neutral">Neutral</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label>Character Name:</label>
-                                <input type="text" id="characterName" placeholder="Enter character name">
-                            </div>
-                            <div class="form-group">
-                                <label>LED Color:</label>
-                                <input type="color" id="ledColor" value="#ff0000">
-                            </div>
-                            <div class="form-group">
-                                <label>Sound File:</label>
-                                <input type="text" id="soundFile" placeholder="Enter sound file name">
-                            </div>
-                            <button onclick="addMoodEntry()">Add Mood Entry</button>
-                            <div id="moodEntryResponse" class="response" style="display: none;"></div>
-                        </div>
+
                     </div>
                 </div>
             </div>
@@ -511,45 +484,6 @@
                 showResponse('moodResponse', data, data.success);
             } catch (error) {
                 showResponse('moodResponse', `Error: ${error.message}`, false);
-            }
-        }
-
-        // Add Mood Entry
-        async function addMoodEntry() {
-            if (!currentToken) {
-                showResponse('moodEntryResponse', 'Please login first', false);
-                return;
-            }
-
-            const emotion = document.getElementById('moodEmotion').value;
-            const characterName = document.getElementById('characterName').value;
-            const ledColor = document.getElementById('ledColor').value;
-            const soundFile = document.getElementById('soundFile').value;
-
-            if (!characterName || !soundFile) {
-                showResponse('moodEntryResponse', 'Please fill in all fields', false);
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/mood-entry`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
-                    },
-                    body: JSON.stringify({
-                        emotion,
-                        character_name: characterName,
-                        led_color: ledColor,
-                        sound_file: soundFile
-                    })
-                });
-
-                const data = await response.json();
-                showResponse('moodEntryResponse', data, data.success);
-            } catch (error) {
-                showResponse('moodEntryResponse', `Error: ${error.message}`, false);
             }
         }
 
