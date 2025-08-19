@@ -1,6 +1,7 @@
 # main.py - Production-ready FastAPI for Railway
 import os
 import sys
+import time
 from datetime import datetime, date
 from typing import Optional, List, Dict, Any
 import logging
@@ -649,8 +650,6 @@ async def timeout_error_handler(request: Request, exc: TimeoutError):
 # 🛡️ Request Rate Limiting & Security
 # -------------------------
 
-from fastapi import Request
-import time
 from collections import defaultdict
 
 # Simple in-memory rate limiting (in production, use Redis)
@@ -944,7 +943,6 @@ async def start_conversation(current_user: dict = Depends(get_current_user)):
         }
     )
 
-@app.post("/chat", response_model=ApiResponse)
 def parse_emotion_response(raw_response: str) -> str:
     """Parse and validate emotion response from AI"""
     
@@ -970,6 +968,8 @@ def parse_emotion_response(raw_response: str) -> str:
     # If nothing matches, default to neutral
     logger.warning(f"Unrecognized emotion '{cleaned}', defaulting to neutral")
     return 'neutral'
+
+@app.post("/chat", response_model=ApiResponse)
 async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_current_user)):
     """Main chat endpoint with crash prevention"""
     if not AI_AVAILABLE:
@@ -1067,6 +1067,12 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
         except Exception as e:
             logger.error(f"Response generation failed: {e}")
             reply = "I'm here to listen and support you. Could you tell me more about how you're feeling?"
+        
+        # Save emotion to database
+        try:
+            save_emotion(user_id, detected_emotion, req.message)
+        except Exception as e:
+            logger.error(f"Failed to save emotion for user {user_id}: {e}")
         
         return ApiResponse(
             success=True,
