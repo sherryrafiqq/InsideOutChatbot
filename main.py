@@ -43,7 +43,7 @@ except ImportError as e:
     sys.exit(1)
 
 # Load environment variables
-load_dotenv()
+load_dotenv("variables.env")
 
 # -------------------------
 # 🔧 Configuration
@@ -289,6 +289,8 @@ response_chain = None
 def initialize_ai():
     """Initialize AI models with retry logic"""
     global AI_AVAILABLE, llm, emotion_chain, response_chain
+    
+    logger.info(f"Initializing AI... COHERE_API_KEY present: {bool(COHERE_API_KEY)}")
     
     if not COHERE_API_KEY:
         logger.warning("Cohere API key not provided - AI features disabled")
@@ -972,11 +974,19 @@ def parse_emotion_response(raw_response: str) -> str:
 @app.post("/chat", response_model=ApiResponse)
 async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_current_user)):
     """Main chat endpoint with crash prevention"""
+    # Debug logging
+    logger.info(f"Chat endpoint called. AI_AVAILABLE: {AI_AVAILABLE}, emotion_chain: {emotion_chain is not None}, response_chain: {response_chain is not None}")
+    
     if not AI_AVAILABLE:
+        logger.error("AI service not available - returning error response")
         return ApiResponse(
             success=False,
             message="Chat unavailable",
-            error="AI service is not available"
+            error="AI service is not available",
+            data={
+                "emotion": "neutral",
+                "reply": "I'm here to listen and support you. Could you tell me more about how you're feeling?"
+            }
         )
     
     try:
@@ -1074,6 +1084,7 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
         except Exception as e:
             logger.error(f"Failed to save emotion for user {user_id}: {e}")
         
+        # Ensure we always return the expected structure
         return ApiResponse(
             success=True,
             message="Chat response generated",
@@ -1088,7 +1099,11 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
         return ApiResponse(
             success=False,
             message="Chat processing failed",
-            error="Unable to process your message right now. Please try again in a moment."
+            error="Unable to process your message right now. Please try again in a moment.",
+            data={
+                "emotion": "neutral",
+                "reply": "I'm here to listen and support you. Could you tell me more about how you're feeling?"
+            }
         )
 
 @app.delete("/clear-history", response_model=ApiResponse)
