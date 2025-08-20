@@ -11,8 +11,6 @@ from datetime import datetime
 
 # Configuration
 BASE_URL = "https://yourusername.pythonanywhere.com"  # Replace with your actual URL
-TEST_USERNAME = "testuser"
-TEST_EMAIL = "test@example.com"
 
 def test_endpoint(endpoint, method="GET", data=None, headers=None):
     """Test a single endpoint"""
@@ -75,80 +73,30 @@ def main():
     total_tests += 1
     print()
     
-    # Test 3: User registration
-    print("3. Testing User Registration")
-    registration_data = {
-        "username": TEST_USERNAME,
-        "email": TEST_EMAIL
-    }
-    if test_endpoint("/register", method="POST", data=registration_data):
+    # Test 3: Start conversation
+    print("3. Testing Start Conversation")
+    if test_endpoint("/start"):
         tests_passed += 1
     total_tests += 1
     print()
     
-    # Test 4: User login
-    print("4. Testing User Login")
-    login_data = {
-        "username": TEST_USERNAME
+    # Test 4: Chat endpoint
+    print("4. Testing Chat Endpoint")
+    chat_data = {
+        "message": "Hello, I'm feeling happy today!"
     }
-    login_response = requests.post(f"{BASE_URL}/login", json=login_data)
-    if login_response.status_code == 200:
-        try:
-            login_result = login_response.json()
-            if login_result.get('success') and login_result.get('token'):
-                token = login_result['token']
-                headers = {"Authorization": f"Bearer {token}"}
-                print("✅ Login successful, token obtained")
-                tests_passed += 1
-            else:
-                print("❌ Login failed - no token received")
-        except:
-            print("❌ Login failed - invalid response")
-    else:
-        print(f"❌ Login failed - Status: {login_response.status_code}")
+    if test_endpoint("/chat", method="POST", data=chat_data):
+        tests_passed += 1
     total_tests += 1
     print()
     
-    # Test 5: Start conversation (requires authentication)
-    print("5. Testing Start Conversation")
-    if 'headers' in locals():
-        if test_endpoint("/start", headers=headers):
-            tests_passed += 1
-    else:
-        print("❌ Skipped - no authentication token")
-    total_tests += 1
-    print()
-    
-    # Test 6: Chat endpoint (requires authentication)
-    print("6. Testing Chat Endpoint")
-    if 'headers' in locals():
-        chat_data = {
-            "message": "Hello, I'm feeling happy today!"
-        }
-        if test_endpoint("/chat", method="POST", data=chat_data, headers=headers):
-            tests_passed += 1
-    else:
-        print("❌ Skipped - no authentication token")
-    total_tests += 1
-    print()
-    
-    # Test 7: Profile endpoint (requires authentication)
-    print("7. Testing Profile Endpoint")
-    if 'headers' in locals():
-        if test_endpoint("/profile", headers=headers):
-            tests_passed += 1
-    else:
-        print("❌ Skipped - no authentication token")
-    total_tests += 1
-    print()
-    
-    # Test 8: Mood tracker (requires authentication)
-    print("8. Testing Mood Tracker")
-    if 'headers' in locals():
-        if test_endpoint("/mood-tracker", headers=headers):
-            tests_passed += 1
-    else:
-        print("❌ Skipped - no authentication token")
+    # Test 5: Test chat endpoint
+    print("5. Testing Test Chat Endpoint")
+    test_chat_data = {
+        "message": "This is a test message"
+    }
+    if test_endpoint("/test-chat", method="POST", data=test_chat_data):
+        tests_passed += 1
     total_tests += 1
     print()
     

@@ -1,4 +1,4 @@
-# main.py - Production-ready FastAPI for Railway
+# main.py - Production-ready FastAPI for Railway (Chatbot Only)
 import os
 import sys
 import time
@@ -23,19 +23,13 @@ if current_dir not in sys.path:
     sys.path.insert(0, current_dir)
 
 try:
-    from fastapi import FastAPI, HTTPException, Depends, status, Request
-    from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+    from fastapi import FastAPI, HTTPException, status, Request
     from fastapi.middleware.cors import CORSMiddleware
     from fastapi.responses import JSONResponse
     from fastapi.staticfiles import StaticFiles
-    from pydantic import BaseModel, EmailStr, validator
-    from supabase import create_client, Client
+    from pydantic import BaseModel, validator
     from langchain_core.prompts import PromptTemplate
     from langchain_cohere import ChatCohere
-    import hashlib
-    import secrets
-    import jwt
-    from collections import Counter
     import traceback
     from dotenv import load_dotenv
 except ImportError as e:
@@ -51,9 +45,6 @@ load_dotenv("variables.env")
 
 # Environment Variables - No hardcoded defaults for security
 COHERE_API_KEY = os.getenv("COHERE_API_KEY")
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-JWT_SECRET = os.getenv("JWT_SECRET")
 
 # Platform specific configurations
 IS_PYTHONANYWHERE = os.getenv("PYTHONANYWHERE_SITE", "").startswith("www.pythonanywhere.com")
@@ -134,80 +125,6 @@ except Exception as e:
     logger.warning(f"Could not mount static files: {e}")
 
 # -------------------------
-# 🗃️ Database Connection with Connection Pooling
-# -------------------------
-supabase: Optional[Client] = None
-db_connection_healthy = False
-last_db_check = 0
-DB_HEALTH_CHECK_INTERVAL = 300  # 5 minutes
-
-def initialize_database():
-    """Initialize database connection with retry logic"""
-    global supabase, db_connection_healthy
-    max_retries = 3
-    retry_delay = 2
-    
-    for attempt in range(max_retries):
-        try:
-            supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-            # Test the connection
-            result = supabase.table("users").select("id").limit(1).execute()
-            logger.info("Supabase connection established successfully")
-            db_connection_healthy = True
-            return True
-        except Exception as e:
-            logger.error(f"Database connection attempt {attempt + 1} failed: {e}")
-            if attempt < max_retries - 1:
-                import time
-                time.sleep(retry_delay)
-                retry_delay *= 2
-            else:
-                logger.error("Failed to establish database connection after all retries")
-                db_connection_healthy = False
-                return False
-
-def check_database_health():
-    """Check database connection health"""
-    global db_connection_healthy, last_db_check
-    current_time = time.time()
-    
-    # Only check every 5 minutes to avoid excessive checks
-    if current_time - last_db_check < DB_HEALTH_CHECK_INTERVAL:
-        return db_connection_healthy
-    
-    last_db_check = current_time
-    
-    try:
-        if supabase:
-            result = supabase.table("users").select("id").limit(1).execute()
-            db_connection_healthy = True
-            return True
-        else:
-            db_connection_healthy = False
-            return False
-    except Exception as e:
-        logger.error(f"Database health check failed: {e}")
-        db_connection_healthy = False
-        return False
-
-def get_database_connection():
-    """Get database connection with health check"""
-    if not check_database_health():
-        logger.warning("Database connection unhealthy, attempting to reconnect...")
-        initialize_database()
-    
-    return supabase
-
-# Initialize database on startup
-if not initialize_database():
-    logger.warning("Database connection failed - some features will be unavailable")
-
-# -------------------------
-# 🔐 Security
-# -------------------------
-security = HTTPBearer(auto_error=False)
-
-# -------------------------
 # 📋 Pydantic Models (Flutter Compatible)
 # -------------------------
 
@@ -219,25 +136,6 @@ class ApiResponse(BaseModel):
     error: Optional[str] = None
     timestamp: str = datetime.utcnow().isoformat()
 
-class UserRegister(BaseModel):
-    username: str
-    email: EmailStr
-    
-    @validator('username')
-    def validate_username(cls, v):
-        if len(v) < 3 or len(v) > 50:
-            raise ValueError('Username must be between 3 and 50 characters')
-        if not v.replace('_', '').replace('-', '').isalnum():
-            raise ValueError('Username can only contain letters, numbers, hyphens, and underscores')
-        return v.lower()
-
-class UserLogin(BaseModel):
-    username: str
-    
-    @validator('username')
-    def validate_username(cls, v):
-        return v.lower()
-
 class ChatRequest(BaseModel):
     message: str
     
@@ -248,33 +146,6 @@ class ChatRequest(BaseModel):
         if len(v) > 1000:
             raise ValueError('Message too long (max 1000 characters)')
         return v.strip()
-
-class MoodEntry(BaseModel):
-    emotion: str
-    character_name: str
-    led_color: str
-    sound_file: str
-    
-    @validator('emotion')
-    def validate_emotion(cls, v):
-        valid_emotions = ['joy', 'sadness', 'anger', 'fear', 'disgust', 'neutral', 'no emotion recorded']
-        if v.lower() not in valid_emotions:
-            raise ValueError(f'Emotion must be one of: {", ".join(valid_emotions)}')
-        return v.lower()
-
-class UserProfile(BaseModel):
-    id: str
-    username: str
-    email: str
-    created_at: str
-
-class AuthResponse(BaseModel):
-    success: bool
-    message: str
-    token: Optional[str] = None
-    user: Optional[UserProfile] = None
-    error: Optional[str] = None
-    timestamp: str = datetime.utcnow().isoformat()
 
 # -------------------------
 # 🤖 AI Configuration
@@ -372,12 +243,6 @@ async def startup_event():
     """Initialize application on startup"""
     logger.info("Starting InsideOut API...")
     
-    # Initialize database
-    if initialize_database():
-        logger.info("✅ Database connection established")
-    else:
-        logger.warning("⚠️ Database connection failed - some features will be unavailable")
-    
     # Initialize AI
     if initialize_ai():
         logger.info("✅ AI services initialized")
@@ -388,12 +253,6 @@ async def startup_event():
     missing_vars = []
     if not COHERE_API_KEY:
         missing_vars.append("COHERE_API_KEY")
-    if not SUPABASE_URL:
-        missing_vars.append("SUPABASE_URL")
-    if not SUPABASE_KEY:
-        missing_vars.append("SUPABASE_KEY")
-    if not JWT_SECRET:
-        missing_vars.append("JWT_SECRET")
     
     if missing_vars:
         logger.warning(f"⚠️ Missing environment variables: {', '.join(missing_vars)}")
@@ -401,184 +260,6 @@ async def startup_event():
         logger.info("✅ All environment variables configured")
     
     logger.info("🚀 InsideOut API startup complete")
-
-# -------------------------
-# 🔐 Authentication Functions
-# -------------------------
-
-def hash_password(password: str) -> str:
-    """Hash password using SHA-256 (in production, use bcrypt)"""
-    return hashlib.sha256(password.encode()).hexdigest()
-
-def create_access_token(user_id: str, username: str) -> str:
-    """Create JWT access token"""
-    try:
-        payload = {
-            "user_id": user_id,
-            "username": username,
-            "exp": datetime.utcnow().timestamp() + 86400,  # 24 hours
-            "iat": datetime.utcnow().timestamp()
-        }
-        return jwt.encode(payload, JWT_SECRET, algorithm="HS256")
-    except Exception as e:
-        logger.error(f"Token creation failed: {e}")
-        raise HTTPException(status_code=500, detail="Token creation failed")
-
-def verify_token(token: str) -> dict:
-    """Verify JWT token"""
-    try:
-        payload = jwt.decode(token, JWT_SECRET, algorithms=["HS256"])
-        if payload["exp"] < datetime.utcnow().timestamp():
-            raise HTTPException(status_code=401, detail="Token expired")
-        return payload
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
-
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get current authenticated user"""
-    if not credentials:
-        raise HTTPException(status_code=401, detail="Authorization header required")
-    
-    payload = verify_token(credentials.credentials)
-    return payload
-
-# -------------------------
-# 🗃️ Database Functions with Error Handling
-# -------------------------
-
-def safe_db_operation(operation_name: str, operation_func):
-    """Wrapper for safe database operations with connection management"""
-    try:
-        db_client = get_database_connection()
-        if not db_client:
-            raise Exception("Database connection not available")
-        return operation_func()
-    except Exception as e:
-        logger.error(f"{operation_name} failed: {e}")
-        # Don't raise HTTPException here, let the calling function handle it
-        return None
-
-def save_emotion(user_id: str, emotion: str, message: str) -> bool:
-    """Save emotion log to database"""
-    def operation():
-        result = supabase.table("emotion_logs").insert({
-            "user_id": user_id,
-            "emotion": emotion,
-            "message": message,
-            "created_at": datetime.utcnow().isoformat()
-        }).execute()
-        return result.data is not None
-    
-    try:
-        return safe_db_operation("save_emotion", operation)
-    except:
-        logger.error(f"Failed to save emotion for user {user_id}")
-        return False
-
-def get_user_history(user_id: str, limit: int = 5) -> str:
-    """Get user's chat history"""
-    def operation():
-        result = supabase.table("emotion_logs") \
-            .select("created_at, emotion, message") \
-            .eq("user_id", user_id) \
-            .order("created_at", desc=True) \
-            .limit(limit) \
-            .execute()
-        
-        rows = result.data
-        if not rows:
-            return "No prior messages."
-        
-        history_lines = []
-        for row in reversed(rows):
-            timestamp = row['created_at'][:19]  # Remove microseconds
-            history_lines.append(f"{timestamp}: ({row['emotion']}) {row['message'][:100]}")
-        
-        return "\n".join(history_lines)
-    
-    try:
-        return safe_db_operation("get_user_history", operation)
-    except:
-        return "No prior messages available."
-
-def get_daily_emotions(user_id: str, target_date: str = None) -> Dict[str, Any]:
-    """Get emotions for a specific day"""
-    if not target_date:
-        target_date = date.today().isoformat()
-    
-    def operation():
-        result = supabase.table("emotion_logs") \
-            .select("emotion, created_at") \
-            .eq("user_id", user_id) \
-            .gte("created_at", f"{target_date}T00:00:00") \
-            .lt("created_at", f"{target_date}T23:59:59") \
-            .execute()
-        
-        # If no activity for the day, return "No Emotion Recorded"
-        if not result.data:
-            return {
-                "date": target_date,
-                "emotions": {},
-                "total_messages": 0,
-                "dominant_emotion": "No Emotion Recorded"
-            }
-        
-        # Filter out neutral emotions for counting, but keep them for total messages
-        emotions = [row['emotion'] for row in result.data if row['emotion'] != 'neutral']
-        emotion_counts = Counter(emotions)
-        
-        # Determine dominant emotion
-        if emotion_counts:
-            dominant_emotion = emotion_counts.most_common(1)[0][0]
-        else:
-            # If only neutral emotions or no emotions, check if there were any messages
-            neutral_count = len([row['emotion'] for row in result.data if row['emotion'] == 'neutral'])
-            if neutral_count > 0:
-                dominant_emotion = "neutral"
-            else:
-                dominant_emotion = "No Emotion Recorded"
-        
-        return {
-            "date": target_date,
-            "emotions": dict(emotion_counts),
-            "total_messages": len(result.data),
-            "dominant_emotion": dominant_emotion
-        }
-    
-    try:
-        return safe_db_operation("get_daily_emotions", operation)
-    except:
-        return {
-            "date": target_date,
-            "emotions": {},
-            "total_messages": 0,
-            "dominant_emotion": "No Emotion Recorded"
-        }
-
-def get_mood_history(user_id: str, days: int = 7) -> List[Dict[str, Any]]:
-    """Get mood history for specified number of days"""
-    mood_data = []
-    current_date = date.today()
-    
-    for i in range(days):
-        check_date = date.fromordinal(current_date.toordinal() - i)
-        daily_mood = get_daily_emotions(user_id, check_date.isoformat())
-        mood_data.append(daily_mood)
-    
-    return list(reversed(mood_data))
-
-def clear_user_history(user_id: str) -> Dict[str, Any]:
-    """Clear user's chat history"""
-    def operation():
-        result = supabase.table("emotion_logs").delete().eq("user_id", user_id).execute()
-        return {"success": True, "message": "Chat history cleared successfully"}
-    
-    try:
-        return safe_db_operation("clear_user_history", operation)
-    except:
-        return {"success": False, "message": "Failed to clear chat history"}
 
 # -------------------------
 # 🚨 Global Exception Handler & Crash Prevention
@@ -707,17 +388,6 @@ async def detailed_health_check():
         "components": {}
     }
     
-    # Check database connection
-    try:
-        if supabase:
-            result = supabase.table("users").select("id").limit(1).execute()
-            health_status["components"]["database"] = "healthy"
-        else:
-            health_status["components"]["database"] = "unavailable"
-    except Exception as e:
-        logger.error(f"Database health check failed: {e}")
-        health_status["components"]["database"] = "unhealthy"
-    
     # Check AI service
     try:
         if AI_AVAILABLE and llm:
@@ -734,12 +404,6 @@ async def detailed_health_check():
     missing_vars = []
     if not COHERE_API_KEY:
         missing_vars.append("COHERE_API_KEY")
-    if not SUPABASE_URL:
-        missing_vars.append("SUPABASE_URL")
-    if not SUPABASE_KEY:
-        missing_vars.append("SUPABASE_KEY")
-    if not JWT_SECRET:
-        missing_vars.append("JWT_SECRET")
     
     health_status["components"]["environment"] = "healthy" if not missing_vars else f"missing: {', '.join(missing_vars)}"
     
@@ -762,14 +426,6 @@ async def shutdown_event():
     """Cleanup on application shutdown"""
     logger.info("Application shutting down...")
     
-    # Close database connections
-    if supabase:
-        try:
-            # Supabase client doesn't have explicit close method, but we can log
-            logger.info("Database connections cleaned up")
-        except Exception as e:
-            logger.error(f"Error during database cleanup: {e}")
-    
     # Clear rate limiting data
     request_counts.clear()
     logger.info("Rate limiting data cleared")
@@ -790,7 +446,6 @@ async def root():
             "version": "1.0.0",
             "status": "healthy",
             "ai_available": AI_AVAILABLE,
-            "database_connected": supabase is not None,
             "environment": "production" if (IS_PYTHONANYWHERE or IS_RENDER or IS_RAILWAY) else "development"
         }
     )
@@ -800,20 +455,10 @@ async def health_check():
     """Detailed health check for monitoring"""
     health_data = {
         "api_status": "healthy",
-        "database_connected": supabase is not None,
         "ai_available": AI_AVAILABLE,
         "timestamp": datetime.utcnow().isoformat(),
         "environment": "production" if (IS_PYTHONANYWHERE or IS_RENDER or IS_RAILWAY) else "development"
     }
-    
-    # Test database connection
-    if supabase:
-        try:
-            result = supabase.table("users").select("id").limit(1).execute()
-            health_data["database_test"] = "passed"
-        except:
-            health_data["database_test"] = "failed"
-            health_data["database_connected"] = False
     
     return ApiResponse(
         success=True,
@@ -821,127 +466,16 @@ async def health_check():
         data=health_data
     )
 
-@app.post("/register", response_model=AuthResponse)
-async def register(user_data: UserRegister):
-    """User registration endpoint"""
-    if not supabase:
-        return AuthResponse(
-            success=False,
-            message="Registration unavailable",
-            error="Database connection not available"
-        )
-    
-    try:
-        # Check if username exists
-        existing_user = supabase.table("users").select("id").eq("username", user_data.username).execute()
-        if existing_user.data:
-            return AuthResponse(
-                success=False,
-                message="Registration failed",
-                error="Username already exists"
-            )
-        
-        # Check if email exists
-        existing_email = supabase.table("users").select("id").eq("email", user_data.email).execute()
-        if existing_email.data:
-            return AuthResponse(
-                success=False,
-                message="Registration failed",
-                error="Email already exists"
-            )
-        
-        # Create new user
-        result = supabase.table("users").insert({
-            "username": user_data.username,
-            "email": user_data.email,
-            "created_at": datetime.utcnow().isoformat()
-        }).execute()
-        
-        if not result.data:
-            raise Exception("User creation failed")
-        
-        user = result.data[0]
-        token = create_access_token(user["id"], user["username"])
-        
-        return AuthResponse(
-            success=True,
-            message="User registered successfully",
-            token=token,
-            user=UserProfile(
-                id=user["id"],
-                username=user["username"],
-                email=user["email"],
-                created_at=user["created_at"]
-            )
-        )
-        
-    except ValueError as e:
-        return AuthResponse(
-            success=False,
-            message="Registration failed",
-            error=str(e)
-        )
-    except Exception as e:
-        logger.error(f"Registration error: {e}")
-        return AuthResponse(
-            success=False,
-            message="Registration failed",
-            error="An error occurred during registration"
-        )
-
-@app.post("/login", response_model=AuthResponse)
-async def login(user_data: UserLogin):
-    """User login endpoint"""
-    if not supabase:
-        return AuthResponse(
-            success=False,
-            message="Login unavailable",
-            error="Database connection not available"
-        )
-    
-    try:
-        result = supabase.table("users").select("*").eq("username", user_data.username).execute()
-        
-        if not result.data:
-            return AuthResponse(
-                success=False,
-                message="Login failed",
-                error="Invalid username"
-            )
-        
-        user = result.data[0]
-        token = create_access_token(user["id"], user["username"])
-        
-        return AuthResponse(
-            success=True,
-            message="Login successful",
-            token=token,
-            user=UserProfile(
-                id=user["id"],
-                username=user["username"],
-                email=user["email"],
-                created_at=user["created_at"]
-            )
-        )
-        
-    except Exception as e:
-        logger.error(f"Login error: {e}")
-        return AuthResponse(
-            success=False,
-            message="Login failed",
-            error="An error occurred during login"
-        )
-
 @app.get("/start", response_model=ApiResponse)
-async def start_conversation(current_user: dict = Depends(get_current_user)):
+async def start_conversation():
     """Start a new conversation"""
     return ApiResponse(
         success=True,
         message="Conversation started",
         data={
             "emotion": "neutral",
-            "reply": f"Hi {current_user['username']}, I'm here for you. How are you feeling today?",
-            "user": current_user['username']
+            "reply": "Hi there! I'm here for you. How are you feeling today?",
+            "user": "anonymous"
         }
     )
 
@@ -972,7 +506,7 @@ def parse_emotion_response(raw_response: str) -> str:
     return 'neutral'
 
 @app.post("/chat", response_model=ApiResponse)
-async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_current_user)):
+async def chat_endpoint(req: ChatRequest):
     """Main chat endpoint with crash prevention"""
     # Debug logging
     logger.info(f"Chat endpoint called. AI_AVAILABLE: {AI_AVAILABLE}, emotion_chain: {emotion_chain is not None}, response_chain: {response_chain is not None}")
@@ -990,8 +524,6 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
         )
     
     try:
-        user_id = current_user["user_id"]
-        
         # Input validation and sanitization
         if not req.message or len(req.message.strip()) == 0:
             return ApiResponse(
@@ -1022,12 +554,12 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
             raw_emotion = emotion_result.content.strip()
             
             # Log the raw emotion detection for debugging
-            logger.info(f"Raw emotion detection for user {user_id}: '{raw_emotion}' for message: '{req.message[:50]}...'")
+            logger.info(f"Raw emotion detection: '{raw_emotion}' for message: '{req.message[:50]}...'")
             
             # Parse the emotion from the response
             detected_emotion = parse_emotion_response(raw_emotion)
             
-            logger.info(f"Final parsed emotion for user {user_id}: '{detected_emotion}'")
+            logger.info(f"Final parsed emotion: '{detected_emotion}'")
             
             # Normalize emotion (this validation is now redundant but kept for safety)
             if detected_emotion not in ['joy', 'sadness', 'anger', 'fear', 'disgust', 'neutral']:
@@ -1035,18 +567,11 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
                 detected_emotion = 'neutral'
                 
         except asyncio.TimeoutError:
-            logger.warning(f"Emotion detection timeout for user {user_id}")
+            logger.warning(f"Emotion detection timeout")
             detected_emotion = 'neutral'
         except Exception as e:
             logger.error(f"Emotion detection failed: {e}")
             detected_emotion = 'neutral'
-        
-        # Get user history with error handling
-        try:
-            history = get_user_history(user_id)
-        except Exception as e:
-            logger.error(f"Failed to get user history for user {user_id}: {e}")
-            history = "No prior messages available."
         
         # Generate response with timeout protection
         reply = "I'm here to listen and support you. Could you tell me more about how you're feeling?"
@@ -1057,7 +582,7 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
                 asyncio.to_thread(response_chain.invoke, {
                     "emotion": detected_emotion,
                     "message": req.message,
-                    "history": history
+                    "history": "No prior messages available."
                 }),
                 timeout=15.0
             )
@@ -1072,17 +597,11 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
                 reply = reply[:2000] + "..."
                 
         except asyncio.TimeoutError:
-            logger.warning(f"Response generation timeout for user {user_id}")
+            logger.warning(f"Response generation timeout")
             reply = "I'm taking a moment to think about your message. Could you tell me more about how you're feeling?"
         except Exception as e:
             logger.error(f"Response generation failed: {e}")
             reply = "I'm here to listen and support you. Could you tell me more about how you're feeling?"
-        
-        # Save emotion to database
-        try:
-            save_emotion(user_id, detected_emotion, req.message)
-        except Exception as e:
-            logger.error(f"Failed to save emotion for user {user_id}: {e}")
         
         # Ensure we always return the expected structure
         return ApiResponse(
@@ -1104,105 +623,6 @@ async def chat_endpoint(req: ChatRequest, current_user: dict = Depends(get_curre
                 "emotion": "neutral",
                 "reply": "I'm here to listen and support you. Could you tell me more about how you're feeling?"
             }
-        )
-
-@app.delete("/clear-history", response_model=ApiResponse)
-async def clear_history(current_user: dict = Depends(get_current_user)):
-    """Clear user's chat history"""
-    user_id = current_user["user_id"]
-    result = clear_user_history(user_id)
-    
-    return ApiResponse(
-        success=result["success"],
-        message=result["message"],
-        data={"user_id": user_id} if result["success"] else None,
-        error=None if result["success"] else result["message"]
-    )
-
-@app.get("/mood-tracker", response_model=ApiResponse)
-async def mood_tracker(days: int = 7, current_user: dict = Depends(get_current_user)):
-    """Get mood tracking data"""
-    try:
-        user_id = current_user["user_id"]
-        mood_history = get_mood_history(user_id, min(days, 30))  # Limit to 30 days
-        today_mood = get_daily_emotions(user_id)
-        
-        return ApiResponse(
-            success=True,
-            message="Mood data retrieved",
-            data={
-                "mood_history": mood_history,
-                "today": today_mood,
-                "days_requested": days
-            }
-        )
-    except Exception as e:
-        logger.error(f"Mood tracker error: {e}")
-        return ApiResponse(
-            success=False,
-            message="Failed to get mood data",
-            error="Unable to retrieve mood tracking data"
-        )
-
-@app.get("/mood-tracker/today", response_model=ApiResponse)
-async def today_mood(current_user: dict = Depends(get_current_user)):
-    """Get today's mood data"""
-    try:
-        user_id = current_user["user_id"]
-        today_data = get_daily_emotions(user_id)
-        
-        return ApiResponse(
-            success=True,
-            message="Today's mood retrieved",
-            data=today_data
-        )
-    except Exception as e:
-        logger.error(f"Today mood error: {e}")
-        return ApiResponse(
-            success=False,
-            message="Failed to get today's mood",
-            error="Unable to retrieve today's mood data"
-        )
-
-@app.post("/mood-entry", response_model=ApiResponse)
-async def add_mood_entry(mood_data: MoodEntry, current_user: dict = Depends(get_current_user)):
-    """Add a mood entry"""
-    if not supabase:
-        return ApiResponse(
-            success=False,
-            message="Mood entry unavailable",
-            error="Database connection not available"
-        )
-    
-    try:
-        user_id = current_user["user_id"]
-        
-        result = supabase.table("character_emotions").insert({
-            "user_id": user_id,
-            "character_name": mood_data.character_name,
-            "emotion": mood_data.emotion,
-            "led_color": mood_data.led_color,
-            "sound_file": mood_data.sound_file,
-            "timestamp": datetime.utcnow().isoformat()
-        }).execute()
-        
-        return ApiResponse(
-            success=True,
-            message="Mood entry added successfully",
-            data={
-                "mood_entry": {
-                    "emotion": mood_data.emotion,
-                    "character_name": mood_data.character_name,
-                    "timestamp": datetime.utcnow().isoformat()
-                }
-            }
-        )
-    except Exception as e:
-        logger.error(f"Mood entry error: {e}")
-        return ApiResponse(
-            success=False,
-            message="Failed to add mood entry",
-            error="Unable to save mood entry"
         )
 
 @app.get("/test")
@@ -1227,65 +647,6 @@ async def test_chat_endpoint(req: ChatRequest):
             "test": "This endpoint works without auth"
         }
     )
-
-
-
-@app.get("/profile", response_model=ApiResponse)
-async def get_profile(current_user: dict = Depends(get_current_user)):
-    """Get user profile and statistics"""
-    if not supabase:
-        return ApiResponse(
-            success=False,
-            message="Profile unavailable",
-            error="Database connection not available"
-        )
-    
-    try:
-        user_id = current_user["user_id"]
-        
-        # Get user info
-        user_result = supabase.table("users").select("*").eq("id", user_id).execute()
-        if not user_result.data:
-            return ApiResponse(
-                success=False,
-                message="User not found",
-                error="User profile not found"
-            )
-        
-        user = user_result.data[0]
-        
-        # Get stats
-        try:
-            messages_result = supabase.table("emotion_logs").select("id", count="exact").eq("user_id", user_id).execute()
-            total_messages = messages_result.count or 0
-        except:
-            total_messages = 0
-        
-        mood_summary = get_mood_history(user_id, 7)
-        
-        return ApiResponse(
-            success=True,
-            message="Profile retrieved successfully",
-            data={
-                "user": {
-                    "id": user["id"],
-                    "username": user["username"],
-                    "email": user["email"],
-                    "created_at": user["created_at"]
-                },
-                "stats": {
-                    "total_messages": total_messages,
-                    "mood_summary": mood_summary
-                }
-            }
-        )
-    except Exception as e:
-        logger.error(f"Profile error: {e}")
-        return ApiResponse(
-            success=False,
-            message="Failed to get profile",
-            error="Unable to retrieve user profile"
-        )
 
 # -------------------------
 # 🚀 Railway WSGI Application

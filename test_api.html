@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>InsideOut API Tester</title>
+    <title>InsideOut Chatbot API Tester</title>
     <style>
         * {
             margin: 0;
@@ -144,14 +144,6 @@
             color: #0c5460;
         }
 
-        .token-display {
-            background: #f8f9fa;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            word-break: break-all;
-        }
-
         .status-indicator {
             display: inline-block;
             width: 12px;
@@ -209,7 +201,7 @@
 <body>
     <div class="container">
         <div class="header">
-            <h1>🤖 InsideOut API Tester</h1>
+            <h1>🤖 InsideOut Chatbot API Tester</h1>
             <p>Test your empathetic AI chatbot API endpoints</p>
         </div>
 
@@ -226,42 +218,6 @@
                 </div>
             </div>
 
-            <!-- Authentication -->
-            <div class="api-section">
-                <div class="section-header">🔐 Authentication</div>
-                <div class="section-content">
-                    <div class="grid">
-                        <div>
-                            <h3>Register User</h3>
-                            <div class="form-group">
-                                <label>Username:</label>
-                                <input type="text" id="regUsername" placeholder="Enter username">
-                            </div>
-                            <div class="form-group">
-                                <label>Email:</label>
-                                <input type="email" id="regEmail" placeholder="Enter email">
-                            </div>
-                            <button onclick="registerUser()">Register</button>
-                            <div id="registerResponse" class="response" style="display: none;"></div>
-                        </div>
-
-                        <div>
-                            <h3>Login User</h3>
-                            <div class="form-group">
-                                <label>Username:</label>
-                                <input type="text" id="loginUsername" placeholder="Enter username">
-                            </div>
-                            <button onclick="loginUser()">Login</button>
-                            <div id="loginResponse" class="response" style="display: none;"></div>
-                        </div>
-                    </div>
-
-                    <div id="tokenDisplay" class="token-display" style="display: none;">
-                        <strong>JWT Token:</strong> <span id="jwtToken"></span>
-                    </div>
-                </div>
-            </div>
-
             <!-- Chat -->
             <div class="api-section">
                 <div class="section-header">💬 Chat</div>
@@ -270,7 +226,7 @@
                         <label>Message:</label>
                         <textarea id="chatMessage" rows="3" placeholder="Type your message here..."></textarea>
                     </div>
-                    <button onclick="sendChat()" id="chatButton" disabled>Send Message</button>
+                    <button onclick="sendChat()" id="chatButton">Send Message</button>
                     
                     <div class="chat-messages" id="chatMessages">
                         <div class="message bot">
@@ -280,36 +236,12 @@
                 </div>
             </div>
 
-            <!-- Mood Tracking -->
+            <!-- Start Conversation -->
             <div class="api-section">
-                <div class="section-header">📊 Mood Tracking</div>
+                <div class="section-header">🚀 Start Conversation</div>
                 <div class="section-content">
-                    <div class="grid">
-                        <div>
-                            <h3>Get Mood History</h3>
-                            <div class="form-group">
-                                <label>Days:</label>
-                                <select id="moodDays">
-                                    <option value="7">7 days</option>
-                                    <option value="14">14 days</option>
-                                    <option value="30">30 days</option>
-                                </select>
-                            </div>
-                            <button onclick="getMoodHistory()">Get Mood History</button>
-                            <div id="moodResponse" class="response" style="display: none;"></div>
-                        </div>
-
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Profile -->
-            <div class="api-section">
-                <div class="section-header">👤 Profile</div>
-                <div class="section-content">
-                    <button onclick="getProfile()">Get Profile</button>
-                    <div id="profileResponse" class="response" style="display: none;"></div>
+                    <button onclick="startConversation()">Start New Conversation</button>
+                    <div id="startResponse" class="response" style="display: none;"></div>
                 </div>
             </div>
         </div>
@@ -317,7 +249,6 @@
 
     <script>
         const API_BASE = 'https://web-production-29fb.up.railway.app';
-        let currentToken = null;
 
         // Utility functions
         function showResponse(elementId, data, isSuccess = true) {
@@ -349,65 +280,18 @@
             }
         }
 
-        // Register User
-        async function registerUser() {
-            const username = document.getElementById('regUsername').value;
-            const email = document.getElementById('regEmail').value;
-
-            if (!username || !email) {
-                showResponse('registerResponse', 'Please fill in all fields', false);
-                return;
-            }
-
+        // Start Conversation
+        async function startConversation() {
             try {
-                const response = await fetch(`${API_BASE}/register`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username, email })
-                });
-
+                const response = await fetch(`${API_BASE}/start`);
                 const data = await response.json();
-                showResponse('registerResponse', data, data.success);
+                showResponse('startResponse', data, data.success);
                 
                 if (data.success) {
-                    document.getElementById('loginUsername').value = username;
+                    addChatMessage('bot', data.data.reply, data.data.emotion);
                 }
             } catch (error) {
-                showResponse('registerResponse', `Error: ${error.message}`, false);
-            }
-        }
-
-        // Login User
-        async function loginUser() {
-            const username = document.getElementById('loginUsername').value;
-
-            if (!username) {
-                showResponse('loginResponse', 'Please enter a username', false);
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/login`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({ username })
-                });
-
-                const data = await response.json();
-                showResponse('loginResponse', data, data.success);
-                
-                if (data.success && data.token) {
-                    currentToken = data.token;
-                    document.getElementById('jwtToken').textContent = data.token;
-                    document.getElementById('tokenDisplay').style.display = 'block';
-                    document.getElementById('chatButton').disabled = false;
-                }
-            } catch (error) {
-                showResponse('loginResponse', `Error: ${error.message}`, false);
+                showResponse('startResponse', `Error: ${error.message}`, false);
             }
         }
 
@@ -420,11 +304,6 @@
                 return;
             }
 
-            if (!currentToken) {
-                alert('Please login first');
-                return;
-            }
-
             // Add user message to chat
             addChatMessage('user', message);
 
@@ -432,8 +311,7 @@
                 const response = await fetch(`${API_BASE}/chat`, {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${currentToken}`
+                        'Content-Type': 'application/json'
                     },
                     body: JSON.stringify({ message })
                 });
@@ -464,50 +342,6 @@
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
 
-        // Get Mood History
-        async function getMoodHistory() {
-            if (!currentToken) {
-                showResponse('moodResponse', 'Please login first', false);
-                return;
-            }
-
-            const days = document.getElementById('moodDays').value;
-
-            try {
-                const response = await fetch(`${API_BASE}/mood-tracker?days=${days}`, {
-                    headers: {
-                        'Authorization': `Bearer ${currentToken}`
-                    }
-                });
-
-                const data = await response.json();
-                showResponse('moodResponse', data, data.success);
-            } catch (error) {
-                showResponse('moodResponse', `Error: ${error.message}`, false);
-            }
-        }
-
-        // Get Profile
-        async function getProfile() {
-            if (!currentToken) {
-                showResponse('profileResponse', 'Please login first', false);
-                return;
-            }
-
-            try {
-                const response = await fetch(`${API_BASE}/profile`, {
-                    headers: {
-                        'Authorization': `Bearer ${currentToken}`
-                    }
-                });
-
-                const data = await response.json();
-                showResponse('profileResponse', data, data.success);
-            } catch (error) {
-                showResponse('profileResponse', `Error: ${error.message}`, false);
-            }
-        }
-
         // Enter key for chat
         document.getElementById('chatMessage').addEventListener('keypress', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -520,5 +354,4 @@
         window.addEventListener('load', checkStatus);
     </script>
 </body>
-</html> 
 </html> 
