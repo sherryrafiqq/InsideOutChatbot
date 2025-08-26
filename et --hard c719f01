@@ -1,0 +1,11 @@
+[33m9389538[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m, [m[1;31morigin/main[m[33m)[m crisis management update
+[33mc719f01[m removed registration
+[33m8936fee[m without mood entry
+[33mbd08a4e[m bot response fix
+[33m3456c61[m undo what claude did
+[33m11dd34c[m Overwrite main.py with local version
+[33m9c5fa93[m Updated main.py with changes
+[33m5fa43c2[m Prepare for Render deployment
+[33mde013a2[m Add main.py and requirements.txt
+[33m906a34d[m Replace repo contents with IoT Sentiment Analysis project
+[33m9da0371[m Initial commit - FastAPI chatbot

@@ -148,7 +148,7 @@ class ChatRequest(BaseModel):
         return v.strip()
 
 # -------------------------
-# 🤖 AI Configuration
+# 🤖 AI Configuration (Optimized for Speed)
 # -------------------------
 
 # Initialize AI models with error handling
@@ -168,7 +168,14 @@ def initialize_ai():
         return False
     
     try:
-        llm = ChatCohere(model="command-r-plus", temperature=0)
+        # Optimized LLM configuration for faster response generation
+        llm = ChatCohere(
+            model="command-r-plus", 
+            temperature=0.1, 
+            max_tokens=150,
+            p=0.9,  # Nucleus sampling for faster generation
+            k=50    # Top-k sampling for faster generation
+        )
         
         emotion_prompt = PromptTemplate.from_template("""
 You are an expert emotion classifier. Analyze the message and classify it into exactly one of these 6 categories:joy, sadness, anger, fear, disgust, neutral. Choose the closest match from: joy, sadness, anger, fear, disgust.
@@ -178,46 +185,21 @@ Respond with ONLY one word: joy, sadness, anger, fear, disgust, or neutral
 """)
 
         response_prompt = PromptTemplate.from_template("""
-You are a warm, deeply empathetic assistant who truly listens to the user as if you are a compassionate human friend. 
-Your goal is to not just reply — but to understand, reflect, and respond in ways that leave the user feeling heard, valued, and supported. 
-You respond in a way that shows care, patience, and real concern for their well-being.
+You are a warm, empathetic friend. Respond briefly (4-5 sentences max) but with genuine care.
 
-Here is a summary of the user's recent messages and emotions:
-{history}
-Don't automatically bring up anything of the user's history. Just keep it to yourself, for context only and to help understand the user's background.
-Their current message is: {message}
-Their detected emotion is: {emotion}
+User's message: {message}
+Detected emotion: {emotion}
 
-Your response should follow these detailed guidelines:
+Guidelines:
+- Use relevant emojis
+- Acknowledge their emotion briefly and validate it
+- Use warm, natural language
+- If they're sad/angry/fearful: offer comfort and support
+- If they're joyful: share their happiness
+- If neutral: gently invite them to share feelings
+- For suicidal/self-harm thoughts: respond with immediate care, mention crisis hotlines (US: 988, UK: 116123), and encourage professional help
 
-1. **General Empathy and Care:**
-   - Always acknowledge the emotion you detect and validate it without judgment.
-   - Use warm, gentle, natural human language — avoid sounding robotic.
-   - If their mood seems to be improving, celebrate that improvement and encourage them to keep taking steps that are helping.
-   - If they are upset, discouraged, or stressed, offer gentle comfort, practical tips, and reassurance that they are not alone.
-   - If they are joyful, express genuine happiness for them and share in their excitement.
-
-2. **If emotion is "No Emotion":**
-   - Keep it friendly, engaging, and curious.
-   - Gently invite them to share how they are feeling today.
-
-3. **Special Safety Protocol – Suicidal Thoughts or Self-Harm Indicators:**
-   - If the message shows *any* signs of suicidal ideation, self-harm, or severe hopelessness:
-     - Respond immediately in a deeply caring, serious, and empathetic tone.
-     - Explicitly acknowledge the seriousness of what they're going through.
-     - Remind them that their life matters and that you care about their safety.
-     - Tell them they deserve to feel supported and not go through this alone.
-     - Kindly ask them which country they are currently in so you can provide the most relevant crisis hotline.
-     - Provide at least one example suicide prevention or mental health crisis hotline for multiple countries (e.g., US, UK, Australia, India) in the meantime.
-     - Encourage them to reach out to a trusted friend, family member, or professional right now.
-     - Avoid giving dismissive, overly short, or vague replies — your message should be long, warm, and reassuring.
-
-4. **Tone:**
-   - Speak as though you are a human who truly cares for them.
-   - Use personal, encouraging phrases like "I'm really glad you told me that" or "I'm here with you in this moment."
-   - Avoid clinical or overly formal wording — sound like a compassionate friend.
-
-Now, using all of these instructions, craft your response to the user.
+Keep responses concise but caring. Sound like a compassionate human friend.
 """)
 
         emotion_chain = emotion_prompt | llm
@@ -577,15 +559,17 @@ async def chat_endpoint(req: ChatRequest):
         reply = "I'm here to listen and support you. Could you tell me more about how you're feeling?"
         try:
             import asyncio
-            # Set timeout for AI calls (15 seconds)
+            start_time = time.time()
+            # Set timeout for AI calls (20 seconds) - optimized for faster responses
             bot_response = await asyncio.wait_for(
                 asyncio.to_thread(response_chain.invoke, {
                     "emotion": detected_emotion,
-                    "message": req.message,
-                    "history": "No prior messages available."
+                    "message": req.message
                 }),
-                timeout=15.0
+                timeout=20.0
             )
+            response_time = time.time() - start_time
+            logger.info(f"Response generated in {response_time:.2f} seconds")
             reply = bot_response.content.strip()
             
             # Validate response
@@ -593,8 +577,8 @@ async def chat_endpoint(req: ChatRequest):
                 reply = "I'm here to listen and support you. Could you tell me more about how you're feeling?"
             
             # Limit response length
-            if len(reply) > 2000:
-                reply = reply[:2000] + "..."
+            if len(reply) > 500:
+                reply = reply[:500] + "..."
                 
         except asyncio.TimeoutError:
             logger.warning(f"Response generation timeout")
